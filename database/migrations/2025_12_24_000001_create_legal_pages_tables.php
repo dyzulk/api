@@ -35,7 +35,7 @@ return new class extends Migration
 
             $table->text('change_log')->nullable();
             $table->boolean('is_active')->default(true); // Internal Soft delete/archive
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->uuid('created_by')->nullable();
             $table->timestamps();
         });
     }
