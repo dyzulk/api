@@ -2,10 +2,12 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrustLab Support Inquiry Reply</title>
     <style>
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            line-height: 1.6;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.5;
             color: #374151;
             margin: 0;
             padding: 0;
@@ -14,21 +16,24 @@
         .container {
             max-width: 600px;
             margin: 40px auto;
-            background: #ffffff;
-            border-radius: 16px;
+            background-color: #ffffff;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .header {
+            padding: 30px 40px;
             background-color: #111827;
-            padding: 32px;
             text-align: center;
+        }
+        .header img {
+            height: 32px;
+            margin-bottom: 5px;
         }
         .header h1 {
             color: #ffffff;
-            margin: 0;
-            font-size: 24px;
+            margin: 10px 0 0 0;
+            font-size: 20px;
             font-weight: 700;
         }
         .content {
@@ -38,15 +43,18 @@
             background-color: #f3f4f6;
             border-radius: 12px;
             padding: 24px;
-            margin-bottom: 32px;
+            margin: 25px 0;
             border-left: 4px solid #3b82f6;
+            font-size: 15px;
+            color: #1f2937;
         }
         .footer {
-            padding: 32px;
+            padding: 30px 40px;
+            background-color: #f9fafb;
             text-align: center;
-            font-size: 14px;
+            font-size: 12px;
             color: #6b7280;
-            border-top: 1px solid #f3f4f6;
+            border-top: 1px solid #e5e7eb;
         }
         .original-message {
             margin-top: 40px;
@@ -60,16 +68,19 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>TrustLab Support</h1>
+            <img src="{{ url('/images/logo/logo-outlined.png') }}" alt="TrustLab Logo">
+            <h1>Support Reply</h1>
         </div>
         <div class="content">
             <p>Hello {{ $inquiry->name }},</p>
             
+            <p>Thank you for contacting TrustLab. Our team has reviewed your inquiry and has the following response:</p>
+
             <div class="reply-box">
                 {!! nl2br(e($replyMessage)) !!}
             </div>
 
-            <p>Best regards,<br>The TrustLab Team</p>
+            <p>Best regards,<br><strong>The TrustLab Team</strong></p>
 
             <div class="original-message">
                 <p><strong>Original Message:</strong></p>
@@ -77,7 +88,8 @@
             </div>
         </div>
         <div class="footer">
-            &copy; {{ date('Y') }} TrustLab. All rights reserved.
+            <p>&copy; {{ date('Y') }} TrustLab. All rights reserved.</p>
+            <p>This is an automated system message. Please do not reply to this email.</p>
         </div>
     </div>
 </body>

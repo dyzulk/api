@@ -83,7 +83,7 @@
     <div class="container">
         <div class="header">
             <!-- Using CID for embedding logo or absolute URL if accessible -->
-            <img src="{{ url('/images/logo/logo.png') }}" alt="TrustLab Logo">
+            <img src="{{ url('/images/logo/logo-outlined.png') }}" alt="TrustLab Logo">
         </div>
         <div class="content">
             <h1 class="title">SMTP Connection Test</h1>
