@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return response()->json(['status' => 'ok', 'service' => 'trustlab-api']);
+    return view('welcome');
 });
 
 use App\Http\Controllers\AuthController;
