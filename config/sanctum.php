@@ -16,10 +16,8 @@ return [
     */
 
     'stateful' => array_merge(
-        explode(',', env('SANCTUM_STATEFUL_DOMAINS', 'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1')),
+        explode(',', env('SANCTUM_STATEFUL_DOMAINS', 'trustlab.dyzulk.com,api.trustlab.dyzulk.com,trustlab.pages.dev')),
         [
-            'trustlab.dyzulk.com',
-            'dev.trustlab.dyzulk.com',
             parse_url(env('APP_URL', ''), PHP_URL_HOST),
             parse_url(env('FRONTEND_URL', ''), PHP_URL_HOST),
         ],
