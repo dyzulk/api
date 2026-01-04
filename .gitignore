@@ -2,7 +2,9 @@
 .DS_Store
 .env
 .env.backup
-.env.production
+.env.example.for.local
+.env.example.for.production
+.env.production.soft.copy
 .phpactor.json
 .phpunit.result.cache
 /.fleet
