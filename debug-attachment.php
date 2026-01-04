@@ -56,6 +56,24 @@ try {
         echo "Diagnosis: Upload failed or path mismatch.\n";
     }
 
+    // 3. Check Relationships (Simulate Controller Auth)
+    echo "\n[3] Checking Relationships (Auth Logic)...\n";
+    $reply = $attachment->reply;
+    if (!$reply) {
+        echo "FATAL: Attachment has NO linked Reply (ticket_reply_id: " . ($attachment->ticket_reply_id ?? 'NULL') . ").\n";
+        echo "Controller Logic `$attachment->reply->ticket` will CRASH here.\n";
+    } else {
+        echo "Reply Found: ID " . $reply->id . "\n";
+        $ticket = $reply->ticket;
+        if (!$ticket) {
+            echo "FATAL: Reply has NO linked Ticket.\n";
+            echo "Controller Logic `$ticket->user_id` will CRASH here.\n";
+        } else {
+            echo "Ticket Found: ID " . $ticket->id . " (Owner: " . $ticket->user_id . ")\n";
+            echo "Auth Logic seems SAFE.\n";
+        }
+    }
+
 } catch (\Exception $e) {
     echo "EXCEPTION: " . $e->getMessage() . "\n";
 }
