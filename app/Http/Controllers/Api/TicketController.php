@@ -82,12 +82,12 @@ class TicketController extends Controller
                 // Handle Attachments
                 if ($request->hasFile('attachments')) {
                     foreach ($request->file('attachments') as $file) {
-                        $path = $file->store('ticket-attachments', 'r2');
-                        $url = Storage::disk('r2')->url($path);
+                        $path = $file->store('ticket-attachments', 'r2-private');
+                        // $url = Storage::disk('r2')->url($path); // Removed public URL generation
                         TicketAttachment::create([
                             'ticket_reply_id' => $reply->id,
                             'file_name' => $file->getClientOriginalName(),
-                            'file_path' => $url,
+                            'file_path' => $path, // Store relative path
                             'file_type' => $file->getClientMimeType(),
                             'file_size' => $file->getSize(),
                         ]);
@@ -170,12 +170,12 @@ class TicketController extends Controller
         // Handle Attachments
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('ticket-attachments', 'r2');
-                $url = Storage::disk('r2')->url($path);
+                $path = $file->store('ticket-attachments', 'r2-private');
+                // $url = Storage::disk('r2')->url($path);
                 TicketAttachment::create([
                     'ticket_reply_id' => $reply->id,
                     'file_name' => $file->getClientOriginalName(),
-                    'file_path' => $url,
+                    'file_path' => $path, // Store relative path
                     'file_type' => $file->getClientMimeType(),
                     'file_size' => $file->getSize(),
                 ]);

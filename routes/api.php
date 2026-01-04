@@ -88,6 +88,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/support/tickets/{id}', [\App\Http\Controllers\Api\TicketController::class, 'show']);
         Route::post('/support/tickets/{id}/reply', [\App\Http\Controllers\Api\TicketController::class, 'reply']);
         Route::patch('/support/tickets/{id}/close', [\App\Http\Controllers\Api\TicketController::class, 'close']);
+        Route::get('/support/attachments/{attachment}', [\App\Http\Controllers\Api\AttachmentController::class, 'download']);
 
         // User Management (Admin Only)
         Route::apiResource('/admin/users', UserApiController::class);
