@@ -14,6 +14,11 @@ use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\MailController;
 use App\Http\Controllers\Api\DashboardController;
 
+// Fallback login route to prevent 500 error on auth failure
+Route::get('/auth/login-fallback', function () {
+    return response()->json(['error' => 'Unauthenticated'], 401);
+})->name('login');
+
 // Public API Routes
 Route::get('/public/ca-certificates', [PublicCaController::class, 'index']);
 Route::get('/public/ca-certificates/{serial}/download', [PublicCaController::class, 'download']);
