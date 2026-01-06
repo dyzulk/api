@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\CaCertificate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PublicCaController extends Controller
 {
@@ -18,13 +19,14 @@ class PublicCaController extends Controller
         $caTypes = ['root', 'intermediate_2048', 'intermediate_4096'];
         
         $certificates = CaCertificate::whereIn('ca_type', $caTypes)
-            ->get(['common_name', 'ca_type', 'serial_number', 'valid_to', 'cert_content'])
+            ->get(['common_name', 'ca_type', 'serial_number', 'valid_to', 'cert_content', 'cert_path'])
             ->map(function ($cert) {
                 return [
                     'name' => $cert->common_name,
                     'type' => $cert->ca_type,
                     'serial' => $cert->serial_number,
                     'expires_at' => $cert->valid_to->toIso8601String(),
+                    'cdn_url' => $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : null,
                 ];
             });
 
@@ -44,6 +46,11 @@ class PublicCaController extends Controller
         $cert->update(['last_downloaded_at' => now()]);
         $format = $request->query('format', 'pem');
         
+        // Redirect to CDN if path exists and format is PEM
+        if ($format === 'pem' && $cert->cert_path) {
+            return redirect()->away(Storage::disk('r2-public')->url($cert->cert_path));
+        }
+
         if ($format === 'der') {
             // Convert PEM to DER (Base64 decode the body)
             $pem = $cert->cert_content;

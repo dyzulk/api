@@ -23,6 +23,8 @@ class CaCertificate extends Model
         'organization',
         'valid_from',
         'valid_to',
+        'cert_path',
+        'last_synced_at',
         'download_count',
         'last_downloaded_at'
     ];
@@ -30,6 +32,7 @@ class CaCertificate extends Model
     protected $casts = [
         'valid_from' => 'datetime',
         'valid_to' => 'datetime',
+        'last_synced_at' => 'datetime',
         'last_downloaded_at' => 'datetime',
     ];
 
