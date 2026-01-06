@@ -505,23 +505,31 @@ class OpenSslService
                "TEMP_CERT=\"/tmp/trustlab-{$cert->uuid}.crt\"\n" .
                "curl -sL \"{$cdnUrl}\" -o \"\$TEMP_CERT\"\n" .
                "if [ ! -f \"\$TEMP_CERT\" ]; then echo \"Failed to download cert\"; exit 1; fi\n\n" .
-               "# Ubuntu/Debian\n" .
-               "if [ -d /usr/local/share/ca-certificates ]; then\n" .
-               "  cp \"\$TEMP_CERT\" \"/usr/local/share/ca-certificates/{$filename}\"\n" .
-               "  update-ca-certificates\n" .
-               "# RHEL/CentOS/Fedora\n" .
-               "elif [ -d /etc/pki/ca-trust/source/anchors ]; then\n" .
-               "  cp \"\$TEMP_CERT\" \"/etc/pki/ca-trust/source/anchors/{$filename}\"\n" .
-               "  update-ca-trust extract\n" .
-               "# Arch Linux\n" .
-               "elif [ -d /etc/ca-certificates/trust-source/anchors ]; then\n" .
-               "  cp \"\$TEMP_CERT\" \"/etc/ca-certificates/trust-source/anchors/{$filename}\"\n" .
-               "  trust extract-compat\n" .
-               "else\n" .
-               "  echo \"Unsupported Linux distribution for automatic install.\"\n" .
-               "  echo \"Please manually install \$TEMP_CERT\"\n" .
-               "  exit 1\n" .
-               "fi\n" .
+                "echo \"Checking for ca-certificates package...\"\n" .
+                "if [ -d /etc/debian_version ]; then\n" .
+                "  apt-get update -qq && apt-get install -y -qq ca-certificates\n" .
+                "elif [ -f /etc/redhat-release ]; then\n" .
+                "  yum install -y -q ca-certificates || dnf install -y -q ca-certificates\n" .
+                "elif [ -f /etc/arch-release ]; then\n" .
+                "  pacman -Sy --noconfirm -q ca-certificates\n" .
+                "fi\n\n" .
+                "# Detection based on directories\n" .
+                "if [ -d /usr/local/share/ca-certificates ]; then\n" .
+                "  cp \"\$TEMP_CERT\" \"/usr/local/share/ca-certificates/{$filename}\"\n" .
+                "  update-ca-certificates\n" .
+                "# RHEL/CentOS/Fedora\n" .
+                "elif [ -d /etc/pki/ca-trust/source/anchors ]; then\n" .
+                "  cp \"\$TEMP_CERT\" \"/etc/pki/ca-trust/source/anchors/{$filename}\"\n" .
+                "  update-ca-trust extract\n" .
+                "# Arch Linux\n" .
+                "elif [ -d /etc/ca-certificates/trust-source/anchors ]; then\n" .
+                "  cp \"\$TEMP_CERT\" \"/etc/ca-certificates/trust-source/anchors/{$filename}\"\n" .
+                "  trust extract-compat\n" .
+                "else\n" .
+                "  echo \"Unsupported Linux distribution for automatic install after package check.\"\n" .
+                "  echo \"Please manually install \$TEMP_CERT\"\n" .
+                "  exit 1\n" .
+                "fi\n" .
                "rm \"\$TEMP_CERT\"\n" .
                "echo \"Installation Complete.\"\n";
     }
@@ -630,7 +638,15 @@ class OpenSslService
                      "# Generated at: {$now}\n" .
                      "echo \"TrustLab - Installing all CA Certificates...\"\n" .
                      "if [ \"\$EUID\" -ne 0 ]; then echo \"Please run as root (sudo)\"; exit 1; fi\n\n" .
-                     "# OS Detection\n" .
+                     "echo \"Checking and installing ca-certificates package...\"\n" .
+                     "if [ -d /etc/debian_version ]; then\n" .
+                     "  apt-get update -qq && apt-get install -y -qq ca-certificates\n" .
+                     "elif [ -f /etc/redhat-release ]; then\n" .
+                     "  yum install -y -q ca-certificates || dnf install -y -q ca-certificates\n" .
+                     "elif [ -f /etc/arch-release ]; then\n" .
+                     "  pacman -Sy --noconfirm -q ca-certificates\n" .
+                     "fi\n\n" .
+                     "# OS Detection after package check\n" .
                      "TARGET_DIR=\"\"\n" .
                      "UPDATE_CMD=\"\"\n\n" .
                      "if [ -d /usr/local/share/ca-certificates ]; then\n" .
@@ -643,7 +659,7 @@ class OpenSslService
                      "  TARGET_DIR=\"/etc/ca-certificates/trust-source/anchors\"\n" .
                      "  UPDATE_CMD=\"trust extract-compat\"\n" .
                      "else\n" .
-                     "  echo \"Unsupported Linux distribution for automatic install.\"\n" .
+                     "  echo \"Unsupported Linux distribution after package check.\"\n" .
                      "  exit 1\n" .
                      "fi\n\n" .
                      "echo \"Cleaning up old TrustLab certificates...\"\n" .
