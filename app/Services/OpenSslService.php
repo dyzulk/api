@@ -423,12 +423,14 @@ class OpenSslService
         return "@echo off\n" .
                "echo TrustLab - Installing {$typeLabel} CA Certificate: {$cert->common_name}\n" .
                "set \"TEMP_CERT=%TEMP%\\trustlab-ca-{$cert->uuid}.crt\"\n" .
-               "curl -sL \"{$cdnUrl}\" -o \"%TEMP_CERT%\"\n" .
+               "echo Downloading certificate...\n" .
+               "curl -L --progress-bar \"{$cdnUrl}\" -o \"%TEMP_CERT%\"\n" .
                "if %ERRORLEVEL% NEQ 0 (\n" .
                "    echo Error: Failed to download certificate.\n" .
                "    pause\n" .
                "    exit /b 1\n" .
                ")\n" .
+               "echo Installing to {$store} store...\n" .
                "certutil -addstore -f \"{$store}\" \"%TEMP_CERT%\"\n" .
                "del \"%TEMP_CERT%\"\n" .
                "echo Installation Complete.\n" .
@@ -505,9 +507,9 @@ class OpenSslService
                "TEMP_CERT=\"/tmp/trustlab-{$cert->uuid}.crt\"\n" .
                "curl -sL \"{$cdnUrl}\" -o \"\$TEMP_CERT\"\n" .
                "if [ ! -f \"\$TEMP_CERT\" ]; then echo \"Failed to download cert\"; exit 1; fi\n\n" .
-                "echo \"Checking for ca-certificates package...\"\n" .
+                "echo \"Checking and installing ca-certificates package...\"\n" .
                 "if [ -d /etc/debian_version ]; then\n" .
-                "  apt-get update -qq && apt-get install -y -qq ca-certificates\n" .
+                "  apt-get update -q && apt-get install -y -q ca-certificates\n" .
                 "elif [ -f /etc/redhat-release ]; then\n" .
                 "  yum install -y -q ca-certificates || dnf install -y -q ca-certificates\n" .
                 "elif [ -f /etc/arch-release ]; then\n" .
@@ -638,9 +640,9 @@ class OpenSslService
                      "# Generated at: {$now}\n" .
                      "echo \"TrustLab - Installing all CA Certificates...\"\n" .
                      "if [ \"\$EUID\" -ne 0 ]; then echo \"Please run as root (sudo)\"; exit 1; fi\n\n" .
-                     "echo \"Checking and installing ca-certificates package...\"\n" .
+                     "echo \"Checking and installing ca-certificates package... (Please wait)\"\n" .
                      "if [ -d /etc/debian_version ]; then\n" .
-                     "  apt-get update -qq && apt-get install -y -qq ca-certificates\n" .
+                     "  apt-get update -q && apt-get install -y -q ca-certificates\n" .
                      "elif [ -f /etc/redhat-release ]; then\n" .
                      "  yum install -y -q ca-certificates || dnf install -y -q ca-certificates\n" .
                      "elif [ -f /etc/arch-release ]; then\n" .
@@ -671,7 +673,7 @@ class OpenSslService
             
             $filename = "trustlab-" . Str::slug($cert->common_name) . ".crt";
             $shContent .= "echo \"Downloading and deploying {$cert->common_name}...\"\n" .
-                          "curl -sL \"{$cdnUrl}\" -o \"\$TARGET_DIR/{$filename}\"\n";
+                          "curl -L --progress-bar \"{$cdnUrl}\" -o \"\$TARGET_DIR/{$filename}\"\n";
         }
         
         $shContent .= "\necho \"Finalizing installation with: \$UPDATE_CMD\"\n" .
@@ -696,7 +698,7 @@ class OpenSslService
             
             $store = $cert->ca_type === 'root' ? 'Root' : 'CA';
             $batContent .= "echo Installing {$cert->common_name} to {$store} store...\n" .
-                           "curl -sL \"{$cdnUrl}\" -o \"%TEMP%\\trustlab-{$cert->uuid}.crt\"\n" .
+                           "curl -L --progress-bar \"{$cdnUrl}\" -o \"%TEMP%\\trustlab-{$cert->uuid}.crt\"\n" .
                            "certutil -addstore -f \"{$store}\" \"%TEMP%\\trustlab-{$cert->uuid}.crt\"\n" .
                            "del \"%TEMP%\\trustlab-{$cert->uuid}.crt\"\n";
         }
