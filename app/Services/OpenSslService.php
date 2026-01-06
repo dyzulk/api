@@ -579,6 +579,7 @@ class OpenSslService
 
         // 3. Generate and Upload Windows Installer (.bat)
         $batContent = $this->generateWindowsInstaller($cert);
+        Storage::disk('r2-public')->delete($batFilename);
         Storage::disk('r2-public')->put($batFilename, $batContent, [
             'visibility' => 'public',
             'ContentType' => 'text/plain',
@@ -587,6 +588,7 @@ class OpenSslService
 
         // 4. Generate and Upload macOS Profile (.mobileconfig)
         $macContent = $this->generateMacInstaller($cert);
+        Storage::disk('r2-public')->delete($macFilename);
         Storage::disk('r2-public')->put($macFilename, $macContent, [
             'visibility' => 'public',
             'ContentType' => 'application/x-apple-aspen-config',
@@ -595,6 +597,7 @@ class OpenSslService
 
         // 5. Generate and Upload Linux Script (.sh)
         $linuxContent = $this->generateLinuxInstaller($cert);
+        Storage::disk('r2-public')->delete($linuxFilename);
         Storage::disk('r2-public')->put($linuxFilename, $linuxContent, [
             'visibility' => 'public',
             'ContentType' => 'text/plain',
@@ -622,7 +625,9 @@ class OpenSslService
         $cacheControl = 'no-cache, no-store, must-revalidate';
 
         // 1. Linux Bundle (.sh)
+        $now = now()->format('Y-m-d H:i:s');
         $shContent = "#!/bin/bash\n" .
+                     "# Generated at: {$now}\n" .
                      "echo \"TrustLab - Installing all CA Certificates...\"\n" .
                      "if [ \"\$EUID\" -ne 0 ]; then echo \"Please run as root (sudo)\"; exit 1; fi\n\n" .
                      "# OS Detection\n" .
@@ -655,6 +660,7 @@ class OpenSslService
                       "\$UPDATE_CMD\n" .
                       "echo \"All certificates installed successfully.\"\n";
 
+        Storage::disk('r2-public')->delete('ca/bundles/trustlab-all.sh');
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.sh', $shContent, [
             'visibility' => 'public',
             'ContentType' => 'text/plain',
@@ -663,6 +669,7 @@ class OpenSslService
 
         // 2. Windows Bundle (.bat)
         $batContent = "@echo off\n" .
+                      "rem Generated at: {$now}\n" .
                       "echo TrustLab - Installing all CA Certificates...\n";
         
         foreach ($certificates as $cert) {
@@ -677,6 +684,7 @@ class OpenSslService
         }
         $batContent .= "echo Installation Complete.\npause";
 
+        Storage::disk('r2-public')->delete('ca/bundles/trustlab-all.bat');
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.bat', $batContent, [
             'visibility' => 'public',
             'ContentType' => 'text/plain',
@@ -735,6 +743,7 @@ class OpenSslService
                       "</dict>\n" .
                       "</plist>";
 
+        Storage::disk('r2-public')->delete('ca/bundles/trustlab-all.mobileconfig');
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.mobileconfig', $macContent, [
             'visibility' => 'public',
             'ContentType' => 'application/x-apple-aspen-config',
