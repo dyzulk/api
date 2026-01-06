@@ -68,6 +68,7 @@ class OpenSslService
                 'organization' => $rootDetails['subject']['O'] ?? null,
                 'valid_from' => date('Y-m-d H:i:s', $rootDetails['validFrom_time_t']),
                 'valid_to' => date('Y-m-d H:i:s', $rootDetails['validTo_time_t']),
+                'is_latest' => true,
             ]);
 
             $this->uploadToCdn($ca);
@@ -107,6 +108,7 @@ class OpenSslService
                 'organization' => $int4096Details['subject']['O'] ?? null,
                 'valid_from' => date('Y-m-d H:i:s', $int4096Details['validFrom_time_t']),
                 'valid_to' => date('Y-m-d H:i:s', $int4096Details['validTo_time_t']),
+                'is_latest' => true,
             ]);
 
             $this->uploadToCdn($ca4096);
@@ -146,6 +148,7 @@ class OpenSslService
                 'organization' => $int2048Details['subject']['O'] ?? null,
                 'valid_from' => date('Y-m-d H:i:s', $int2048Details['validFrom_time_t']),
                 'valid_to' => date('Y-m-d H:i:s', $int2048Details['validTo_time_t']),
+                'is_latest' => true,
             ]);
 
             $this->uploadToCdn($ca2048);
@@ -414,9 +417,15 @@ class OpenSslService
     /**
      * Generate Windows Installer (.bat)
      */
-    public function generateWindowsInstaller(CaCertificate $cert): string
+    public function generateWindowsInstaller(CaCertificate $cert, bool $isArchive = false): string
     {
-        $cdnUrl = $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : url("/api/public/ca/{$cert->uuid}/download/pem");
+        $slug = Str::slug($cert->common_name);
+        if ($isArchive) {
+            $cdnUrl = Storage::disk('r2-public')->url("ca/archives/{$cert->uuid}/{$slug}.crt");
+        } else {
+            $cdnUrl = Storage::disk('r2-public')->url("ca/{$slug}.crt");
+        }
+
         $typeLabel = $cert->ca_type === 'root' ? 'Root' : 'Intermediate';
         $store = $cert->ca_type === 'root' ? 'Root' : 'CA';
 
@@ -496,10 +505,16 @@ class OpenSslService
     /**
      * Generate Linux Installer (.sh)
      */
-    public function generateLinuxInstaller(CaCertificate $cert): string
+    public function generateLinuxInstaller(CaCertificate $cert, bool $isArchive = false): string
     {
-        $cdnUrl = $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : url("/api/public/ca/{$cert->uuid}/download/pem");
-        $filename = "trustlab-" . Str::slug($cert->common_name) . ".crt";
+        $slug = Str::slug($cert->common_name);
+        if ($isArchive) {
+            $cdnUrl = Storage::disk('r2-public')->url("ca/archives/{$cert->uuid}/{$slug}.crt");
+        } else {
+            $cdnUrl = Storage::disk('r2-public')->url("ca/{$slug}.crt");
+        }
+
+        $filename = "trustlab-" . $slug . ".crt";
 
         return "#!/bin/bash\n" .
                "echo \"TrustLab - Installing CA Certificate: {$cert->common_name}\"\n" .
@@ -544,36 +559,50 @@ class OpenSslService
     /**
      * Upload only PEM/DER (The CRT files) to CDN.
      */
-    public function uploadPublicCertsOnly(CaCertificate $cert)
+    public function uploadPublicCertsOnly(CaCertificate $cert, string $mode = 'both')
     {
-        $baseFilename = 'ca/' . Str::slug($cert->common_name) . '-' . $cert->uuid;
-        $pemFilename = $baseFilename . '.crt';
-        $derFilename = $baseFilename . '.der';
-
-        // 1. Upload PEM (.crt)
-        Storage::disk('r2-public')->put($pemFilename, $cert->cert_content, [
-            'visibility' => 'public',
-            'ContentType' => 'application/x-x509-ca-cert'
-        ]);
-
-        // 2. Convert to DER and Upload (.der)
-        $lines = explode("\n", trim($cert->cert_content));
-        $payload = '';
-        foreach ($lines as $line) {
-            if (!str_starts_with($line, '-----')) {
-                $payload .= trim($line);
-            }
-        }
-        $derContent = base64_decode($payload);
+        $slug = Str::slug($cert->common_name);
+        $paths = [];
         
-        Storage::disk('r2-public')->put($derFilename, $derContent, [
-            'visibility' => 'public',
-            'ContentType' => 'application/x-x509-ca-cert'
-        ]);
+        if ($mode === 'archive' || $mode === 'both') {
+            $paths[] = "ca/archives/{$cert->uuid}/{$slug}";
+        }
+        if ($mode === 'latest' || $mode === 'both') {
+            $paths[] = "ca/{$slug}";
+        }
 
+        foreach ($paths as $basePath) {
+            $pemPath = $basePath . '.crt';
+            $derPath = $basePath . '.der';
+
+            // 1. Upload PEM (.crt)
+            Storage::disk('r2-public')->put($pemPath, $cert->cert_content, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-x509-ca-cert',
+                'CacheControl' => 'no-cache, no-store, must-revalidate'
+            ]);
+
+            // 2. Convert to DER and Upload (.der)
+            $lines = explode("\n", trim($cert->cert_content));
+            $payload = '';
+            foreach ($lines as $line) {
+                if (!str_starts_with($line, '-----')) {
+                    $payload .= trim($line);
+                }
+            }
+            $derContent = base64_decode($payload);
+            
+            Storage::disk('r2-public')->put($derPath, $derContent, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-x509-ca-cert',
+                'CacheControl' => 'no-cache, no-store, must-revalidate'
+            ]);
+        }
+
+        // Always point model paths to the 'latest' version for public UI
         $cert->update([
-            'cert_path' => $pemFilename,
-            'der_path' => $derFilename,
+            'cert_path' => "ca/{$slug}.crt",
+            'der_path' => "ca/{$slug}.der",
             'last_synced_at' => now()
         ]);
 
@@ -583,49 +612,71 @@ class OpenSslService
     /**
      * Upload individual installers (SH, BAT, MAC) to CDN.
      */
-    public function uploadIndividualInstallersOnly(CaCertificate $cert)
+    public function uploadIndividualInstallersOnly(CaCertificate $cert, string $mode = 'both')
     {
-        $baseFilename = 'ca/' . Str::slug($cert->common_name) . '-' . $cert->uuid;
-        $batFilename = $baseFilename . '.bat';
-        $macFilename = $baseFilename . '.mobileconfig';
-        $linuxFilename = $baseFilename . '.sh';
-        
+        $slug = Str::slug($cert->common_name);
         $cacheControl = 'no-cache, no-store, must-revalidate';
+        
+        $syncs = [];
+        if ($mode === 'archive' || $mode === 'both') {
+            $syncs[] = ['base' => "ca/archives/{$cert->uuid}/installers/trustlab-{$slug}", 'isArchive' => true];
+        }
+        if ($mode === 'latest' || $mode === 'both') {
+            $syncs[] = ['base' => "ca/installers/trustlab-{$slug}", 'isArchive' => false];
+        }
 
-        // 3. Generate and Upload Windows Installer (.bat)
-        $batContent = $this->generateWindowsInstaller($cert);
-        Storage::disk('r2-public')->delete($batFilename);
-        Storage::disk('r2-public')->put($batFilename, $batContent, [
-            'visibility' => 'public',
-            'ContentType' => 'text/plain',
-            'CacheControl' => $cacheControl
-        ]);
+        foreach ($syncs as $sync) {
+            $batPath = $sync['base'] . '.bat';
+            $macPath = $sync['base'] . '.mobileconfig';
+            $linuxPath = $sync['base'] . '.sh';
 
-        // 4. Generate and Upload macOS Profile (.mobileconfig)
-        $macContent = $this->generateMacInstaller($cert);
-        Storage::disk('r2-public')->delete($macFilename);
-        Storage::disk('r2-public')->put($macFilename, $macContent, [
-            'visibility' => 'public',
-            'ContentType' => 'application/x-apple-aspen-config',
-            'CacheControl' => $cacheControl
-        ]);
+            // 3. Generate and Upload Windows Installer (.bat)
+            $batContent = $this->generateWindowsInstaller($cert, $sync['isArchive']);
+            Storage::disk('r2-public')->put($batPath, $batContent, [
+                'visibility' => 'public',
+                'ContentType' => 'text/plain',
+                'CacheControl' => $cacheControl
+            ]);
 
-        // 5. Generate and Upload Linux Script (.sh)
-        $linuxContent = $this->generateLinuxInstaller($cert);
-        Storage::disk('r2-public')->delete($linuxFilename);
-        Storage::disk('r2-public')->put($linuxFilename, $linuxContent, [
-            'visibility' => 'public',
-            'ContentType' => 'text/plain',
-            'CacheControl' => $cacheControl
-        ]);
+            // 4. Generate and Upload macOS Profile (.mobileconfig)
+            $macContent = $this->generateMacInstaller($cert); // macOS profiles are self-contained
+            Storage::disk('r2-public')->put($macPath, $macContent, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-apple-aspen-config',
+                'CacheControl' => $cacheControl
+            ]);
+
+            // 5. Generate and Upload Linux Script (.sh)
+            $linuxContent = $this->generateLinuxInstaller($cert, $sync['isArchive']);
+            Storage::disk('r2-public')->put($linuxPath, $linuxContent, [
+                'visibility' => 'public',
+                'ContentType' => 'text/plain',
+                'CacheControl' => $cacheControl
+            ]);
+        }
 
         $cert->update([
-            'bat_path' => $batFilename,
-            'mac_path' => $macFilename,
-            'linux_path' => $linuxFilename,
+            'bat_path' => "ca/installers/trustlab-{$slug}.bat",
+            'mac_path' => "ca/installers/trustlab-{$slug}.mobileconfig",
+            'linux_path' => "ca/installers/trustlab-{$slug}.sh",
             'last_synced_at' => now()
         ]);
 
+        return true;
+    }
+
+    /**
+     * Promote an archived certificate version to 'Latest' (public root)
+     */
+    public function promoteToLatest(CaCertificate $cert)
+    {
+        // Simply re-sync this specific certificate version as 'latest'
+        $this->uploadPublicCertsOnly($cert, 'latest');
+        $this->uploadIndividualInstallersOnly($cert, 'latest');
+        
+        // Also sync all bundles to ensure global installers are updated with this promoted version
+        $this->syncAllBundles();
+        
         return true;
     }
 

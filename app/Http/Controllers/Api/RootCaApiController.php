@@ -40,17 +40,35 @@ class RootCaApiController extends Controller
         try {
             $newData = $this->sslService->renewCaCertificate($certificate, $days);
 
-            $certificate->update([
+            // 1. Unset 'is_latest' from all versions of this CA type/name
+            CaCertificate::where('ca_type', $certificate->ca_type)
+                ->where('common_name', $certificate->common_name)
+                ->update(['is_latest' => false]);
+
+            // 2. Create NEW version record
+            $newCertificate = CaCertificate::create([
+                'ca_type' => $certificate->ca_type,
+                'common_name' => $certificate->common_name,
+                'organization' => $certificate->organization,
+                'key_content' => $certificate->key_content, // Keep same private key for renewal
                 'cert_content' => $newData['cert_content'],
                 'serial_number' => $newData['serial_number'],
                 'valid_from' => $newData['valid_from'],
                 'valid_to' => $newData['valid_to'],
+                'is_latest' => true,
             ]);
+
+            // 3. Automatically sync the new version to CDN (Both latest and archive locations)
+            $this->sslService->uploadPublicCertsOnly($newCertificate, 'both');
+            $this->sslService->uploadIndividualInstallersOnly($newCertificate, 'both');
+            
+            // 4. Update bundles
+            $this->sslService->syncAllBundles();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Certificate renewed successfully.',
-                'data' => $certificate
+                'message' => 'Certificate renewed as a new version successfully.',
+                'data' => $newCertificate
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -60,35 +78,37 @@ class RootCaApiController extends Controller
         }
     }
 
-    public function syncCrtOnly()
+    public function syncCrtOnly(Request $request)
     {
         $this->authorizeAdminOrOwner();
         try {
+            $mode = $request->input('mode', 'both');
             $certificates = CaCertificate::all();
             $count = 0;
             foreach ($certificates as $cert) {
-                if ($this->sslService->uploadPublicCertsOnly($cert)) {
+                if ($this->sslService->uploadPublicCertsOnly($cert, $mode)) {
                     $count++;
                 }
             }
-            return response()->json(['status' => 'success', 'message' => "Successfully synced {$count} CRT files."]);
+            return response()->json(['status' => 'success', 'message' => "Successfully synced {$count} CRT files (Mode: {$mode})."]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'Sync failed: ' . $e->getMessage()], 500);
         }
     }
 
-    public function syncInstallersOnly()
+    public function syncInstallersOnly(Request $request)
     {
         $this->authorizeAdminOrOwner();
         try {
+            $mode = $request->input('mode', 'both');
             $certificates = CaCertificate::all();
             $count = 0;
             foreach ($certificates as $cert) {
-                if ($this->sslService->uploadIndividualInstallersOnly($cert)) {
+                if ($this->sslService->uploadIndividualInstallersOnly($cert, $mode)) {
                     $count++;
                 }
             }
-            return response()->json(['status' => 'success', 'message' => "Successfully synced {$count} installer sets."]);
+            return response()->json(['status' => 'success', 'message' => "Successfully synced {$count} installer sets (Mode: {$mode})."]);
         } catch (\Exception $e) {
             return response()->json(['status' => 'error', 'message' => 'Sync failed: ' . $e->getMessage()], 500);
         }
@@ -107,29 +127,55 @@ class RootCaApiController extends Controller
         }
     }
 
-    public function syncToCdn()
+    public function syncToCdn(Request $request)
     {
         $this->authorizeAdminOrOwner();
+        $mode = $request->input('mode', 'both');
 
         try {
             $certificates = CaCertificate::all();
             $count = 0;
 
             foreach ($certificates as $cert) {
-                if ($this->sslService->uploadToCdn($cert)) {
+                if ($this->sslService->uploadPublicCertsOnly($cert, $mode)) {
+                    $this->sslService->uploadIndividualInstallersOnly($cert, $mode);
                     $count++;
                 }
             }
+            
+            // Also sync bundles (Always 'latest' as bundles are aggregate)
+            $this->sslService->syncAllBundles();
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Successfully synced everything ({$count} certs + bundles) to CDN."
+                'message' => "Successfully synced everything ({$count} certs + bundles) to CDN (Mode: {$mode})."
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Sync failed: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function promote(CaCertificate $certificate)
+    {
+        $this->authorizeAdminOrOwner();
+        try {
+            // 1. Unset 'is_latest' from all versions of this CA type/name
+            CaCertificate::where('ca_type', $certificate->ca_type)
+                ->where('common_name', $certificate->common_name)
+                ->update(['is_latest' => false]);
+
+            // 2. Set this one as latest
+            $certificate->update(['is_latest' => true]);
+
+            // 3. Promote on CDN
+            $this->sslService->promoteToLatest($certificate);
+
+            return response()->json(['status' => 'success', 'message' => "Certificate version {$certificate->uuid} promoted to Latest successfully."]);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => 'Promotion failed: ' . $e->getMessage()], 500);
         }
     }
 

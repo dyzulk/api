@@ -26,6 +26,7 @@ return new class extends Migration
                 $table->string('bat_path')->nullable();
                 $table->string('mac_path')->nullable();
                 $table->string('linux_path')->nullable();
+                $table->boolean('is_latest')->default(false);
                 $table->timestamp('last_synced_at')->nullable();
                 
                 $table->string('common_name')->nullable();
@@ -57,6 +58,9 @@ return new class extends Migration
                 }
                 if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'last_synced_at')) {
                     $table->timestamp('last_synced_at')->nullable()->after('linux_path');
+                }
+                if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'is_latest')) {
+                    $table->boolean('is_latest')->default(false)->after('last_synced_at');
                 }
             });
         }
