@@ -505,7 +505,8 @@ class OpenSslService
                "echo \"TrustLab - Installing CA Certificate: {$cert->common_name}\"\n" .
                "if [ \"\$EUID\" -ne 0 ]; then echo \"Please run as root (sudo)\"; exit 1; fi\n" .
                "TEMP_CERT=\"/tmp/trustlab-{$cert->uuid}.crt\"\n" .
-               "curl -sL \"{$cdnUrl}\" -o \"\$TEMP_CERT\"\n" .
+               "echo \"Downloading certificate...\"\n" .
+               "curl -L --progress-bar \"{$cdnUrl}\" -o \"\$TEMP_CERT\"\n" .
                "if [ ! -f \"\$TEMP_CERT\" ]; then echo \"Failed to download cert\"; exit 1; fi\n\n" .
                 "echo \"Checking and installing ca-certificates package...\"\n" .
                 "if [ -d /etc/debian_version ]; then\n" .
