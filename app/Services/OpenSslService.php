@@ -412,7 +412,125 @@ class OpenSslService
         }
     }
     /**
-     * Upload CA certificate (public) to R2 CDN in both PEM and DER formats.
+     * Generate Windows Installer (.bat)
+     */
+    public function generateWindowsInstaller(CaCertificate $cert): string
+    {
+        $cdnUrl = $this->getPublicKeyCdnUrl($cert, 'cer'); // Windows prefer .cer (DER or PEM)
+        // Note: certutil can import PEM/CRT as well. We'll use the .crt (PEM) from CDN.
+        $cdnUrl = $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : url("/api/public/ca/{$cert->uuid}/download/pem");
+
+        return "@echo off\n" .
+               "echo TrustLab - Installing Certificate: {$cert->common_name}\n" .
+               "set \"TEMP_CERT=%TEMP%\\trustlab-ca-{$cert->uuid}.crt\"\n" .
+               "curl -sL \"{$cdnUrl}\" -o \"%TEMP_CERT%\"\n" .
+               "if %ERRORLEVEL% NEQ 0 (\n" .
+               "    echo Error: Failed to download certificate.\n" .
+               "    pause\n" .
+               "    exit /b 1\n" .
+               ")\n" .
+               "certutil -addstore -f \"Root\" \"%TEMP_CERT%\"\n" .
+               "del \"%TEMP_CERT%\"\n" .
+               "echo Installation Complete.\n" .
+               "pause";
+    }
+
+    /**
+     * Generate macOS Configuration Profile (.mobileconfig)
+     */
+    public function generateMacInstaller(CaCertificate $cert): string
+    {
+        $certBase64 = base64_encode($cert->cert_content);
+        $payloadId = "com.trustlab.ca." . Str::slug($cert->common_name);
+        $uuid1 = Str::uuid()->toString();
+        $uuid2 = Str::uuid()->toString();
+
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" .
+               "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" .
+               "<plist version=\"1.0\">\n" .
+               "<dict>\n" .
+               "    <key>PayloadContent</key>\n" .
+               "    <array>\n" .
+               "        <dict>\n" .
+               "            <key>PayloadCertificateFileName</key>\n" .
+               "            <string>{$cert->common_name}.crt</string>\n" .
+               "            <key>PayloadContent</key>\n" .
+               "            <data>{$certBase64}</data>\n" .
+               "            <key>PayloadDescription</key>\n" .
+               "            <string>TrustLab CA Certificate</string>\n" .
+               "            <key>PayloadDisplayName</key>\n" .
+               "            <string>{$cert->common_name}</string>\n" .
+               "            <key>PayloadIdentifier</key>\n" .
+               "            <string>{$payloadId}.cert</string>\n" .
+               "            <key>PayloadType</key>\n" .
+               "            <string>com.apple.security.root</string>\n" .
+               "            <key>PayloadUUID</key>\n" .
+               "            <string>{$uuid2}</string>\n" .
+               "            <key>PayloadVersion</key>\n" .
+               "            <integer>1</integer>\n" .
+               "        </dict>\n" .
+               "    </array>\n" .
+               "    <key>PayloadDescription</key>\n" .
+               "    <string>TrustLab CA Root Installation</string>\n" .
+               "    <key>PayloadDisplayName</key>\n" .
+               "    <string>TrustLab CA: {$cert->common_name}</string>\n" .
+               "    <key>PayloadIdentifier</key>\n" .
+               "    <string>{$payloadId}</string>\n" .
+               "    <key>PayloadRemovalDisallowed</key>\n" .
+               "    <false/>\n" .
+               "    <key>PayloadType</key>\n" .
+               "    <string>Configuration</string>\n" .
+               "    <key>PayloadUUID</key>\n" .
+               "    <string>{$uuid1}</string>\n" .
+               "    <key>PayloadVersion</key>\n" .
+               "    <integer>1</integer>\n" .
+               "</dict>\n" .
+               "</plist>";
+    }
+
+    /**
+     * Generate Linux Installer (.sh)
+     */
+    public function generateLinuxInstaller(CaCertificate $cert): string
+    {
+        $cdnUrl = $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : url("/api/public/ca/{$cert->uuid}/download/pem");
+        $filename = Str::slug($cert->common_name) . ".crt";
+
+        return "#!/bin/bash\n" .
+               "echo \"TrustLab - Installing CA Certificate: {$cert->common_name}\"\n" .
+               "if [ \"\$EUID\" -ne 0 ]; then echo \"Please run as root (sudo)\"; exit 1; fi\n" .
+               "TEMP_CERT=\"/tmp/trustlab-{$cert->uuid}.crt\"\n" .
+               "curl -sL \"{$cdnUrl}\" -o \"\$TEMP_CERT\"\n" .
+               "if [ ! -f \"\$TEMP_CERT\" ]; then echo \"Failed to download cert\"; exit 1; fi\n\n" .
+               "# Ubuntu/Debian\n" .
+               "if [ -d /usr/local/share/ca-certificates ]; then\n" .
+               "  cp \"\$TEMP_CERT\" \"/usr/local/share/ca-certificates/{$filename}\"\n" .
+               "  update-ca-certificates\n" .
+               "# RHEL/CentOS/Fedora\n" .
+               "elif [ -d /etc/pki/ca-trust/source/anchors ]; then\n" .
+               "  cp \"\$TEMP_CERT\" \"/etc/pki/ca-trust/source/anchors/{$filename}\"\n" .
+               "  update-ca-trust extract\n" .
+               "# Arch Linux\n" .
+               "elif [ -d /etc/ca-certificates/trust-source/anchors ]; then\n" .
+               "  cp \"\$TEMP_CERT\" \"/etc/ca-certificates/trust-source/anchors/{$filename}\"\n" .
+               "  trust extract-compat\n" .
+               "else\n" .
+               "  echo \"Unsupported Linux distribution for automatic install.\"\n" .
+               "  echo \"Please manually install \$TEMP_CERT\"\n" .
+               "  exit 1\n" .
+               "fi\n" .
+               "rm \"\$TEMP_CERT\"\n" .
+               "echo \"Installation Complete.\"\n";
+    }
+
+    private function getPublicKeyCdnUrl(CaCertificate $cert, $ext)
+    {
+        $path = $ext === 'der' ? $cert->der_path : $cert->cert_path;
+        return $path ? Storage::disk('r2-public')->url($path) : null;
+    }
+
+    /**
+     * Upload CA certificate (public) to R2 CDN in 5 formats.
      */
     public function uploadToCdn(CaCertificate $cert)
     {
@@ -420,6 +538,9 @@ class OpenSslService
             $baseFilename = 'ca/' . Str::slug($cert->common_name) . '-' . $cert->uuid;
             $pemFilename = $baseFilename . '.crt';
             $derFilename = $baseFilename . '.der';
+            $batFilename = $baseFilename . '.bat';
+            $macFilename = $baseFilename . '.mobileconfig';
+            $linuxFilename = $baseFilename . '.sh';
             
             // 1. Upload PEM (.crt)
             Storage::disk('r2-public')->put($pemFilename, $cert->cert_content, [
@@ -442,9 +563,33 @@ class OpenSslService
                 'ContentType' => 'application/x-x509-ca-cert'
             ]);
 
+            // 3. Generate and Upload Windows Installer (.bat)
+            $batContent = $this->generateWindowsInstaller($cert);
+            Storage::disk('r2-public')->put($batFilename, $batContent, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-msdos-program'
+            ]);
+
+            // 4. Generate and Upload macOS Profile (.mobileconfig)
+            $macContent = $this->generateMacInstaller($cert);
+            Storage::disk('r2-public')->put($macFilename, $macContent, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-apple-aspen-config'
+            ]);
+
+            // 5. Generate and Upload Linux Script (.sh)
+            $linuxContent = $this->generateLinuxInstaller($cert);
+            Storage::disk('r2-public')->put($linuxFilename, $linuxContent, [
+                'visibility' => 'public',
+                'ContentType' => 'application/x-sh'
+            ]);
+
             $cert->update([
                 'cert_path' => $pemFilename,
                 'der_path' => $derFilename,
+                'bat_path' => $batFilename,
+                'mac_path' => $macFilename,
+                'linux_path' => $linuxFilename,
                 'last_synced_at' => now()
             ]);
 

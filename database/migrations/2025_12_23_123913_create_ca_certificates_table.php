@@ -23,6 +23,9 @@ return new class extends Migration
                 // CDN Integration Columns
                 $table->string('cert_path')->nullable();
                 $table->string('der_path')->nullable();
+                $table->string('bat_path')->nullable();
+                $table->string('mac_path')->nullable();
+                $table->string('linux_path')->nullable();
                 $table->timestamp('last_synced_at')->nullable();
                 
                 $table->string('common_name')->nullable();
@@ -43,8 +46,17 @@ return new class extends Migration
                 if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'der_path')) {
                     $table->string('der_path')->nullable()->after('cert_path');
                 }
+                if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'bat_path')) {
+                    $table->string('bat_path')->nullable()->after('der_path');
+                }
+                if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'mac_path')) {
+                    $table->string('mac_path')->nullable()->after('bat_path');
+                }
+                if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'linux_path')) {
+                    $table->string('linux_path')->nullable()->after('mac_path');
+                }
                 if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'last_synced_at')) {
-                    $table->timestamp('last_synced_at')->nullable()->after('der_path');
+                    $table->timestamp('last_synced_at')->nullable()->after('linux_path');
                 }
             });
         }

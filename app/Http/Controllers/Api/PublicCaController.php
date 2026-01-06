@@ -19,15 +19,19 @@ class PublicCaController extends Controller
         $caTypes = ['root', 'intermediate_2048', 'intermediate_4096'];
         
         $certificates = CaCertificate::whereIn('ca_type', $caTypes)
-            ->get(['common_name', 'ca_type', 'serial_number', 'valid_to', 'cert_content', 'cert_path'])
+            ->get(['common_name', 'ca_type', 'serial_number', 'valid_to', 'cert_content', 'cert_path', 'der_path', 'bat_path', 'mac_path', 'linux_path', 'last_synced_at'])
             ->map(function ($cert) {
                 return [
                     'name' => $cert->common_name,
                     'type' => $cert->ca_type,
                     'serial' => $cert->serial_number,
                     'expires_at' => $cert->valid_to->toIso8601String(),
+                    'last_synced_at' => $cert->last_synced_at ? $cert->last_synced_at->toIso8601String() : null,
                     'cdn_url' => $cert->cert_path ? Storage::disk('r2-public')->url($cert->cert_path) : null,
                     'der_cdn_url' => $cert->der_path ? Storage::disk('r2-public')->url($cert->der_path) : null,
+                    'bat_cdn_url' => $cert->bat_path ? Storage::disk('r2-public')->url($cert->bat_path) : null,
+                    'mac_cdn_url' => $cert->mac_path ? Storage::disk('r2-public')->url($cert->mac_path) : null,
+                    'linux_cdn_url' => $cert->linux_path ? Storage::disk('r2-public')->url($cert->linux_path) : null,
                 ];
             });
 
@@ -88,6 +92,11 @@ class PublicCaController extends Controller
         $cert = CaCertificate::where('serial_number', $serial)->firstOrFail();
         $cert->increment('download_count');
         $cert->update(['last_downloaded_at' => now()]);
+
+        if ($cert->bat_path) {
+            return redirect()->away(Storage::disk('r2-public')->url($cert->bat_path));
+        }
+
         $store = $cert->ca_type === 'root' ? 'Root' : 'CA';
         $filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $cert->common_name);
         
@@ -120,6 +129,10 @@ class PublicCaController extends Controller
         $cert = CaCertificate::where('serial_number', $serial)->firstOrFail();
         $cert->increment('download_count');
         $cert->update(['last_downloaded_at' => now()]);
+
+        if ($cert->mac_path) {
+            return redirect()->away(Storage::disk('r2-public')->url($cert->mac_path));
+        }
         
         // Extract Base64 payload
         $pem = $cert->cert_content;
@@ -180,5 +193,27 @@ class PublicCaController extends Controller
         return response($xml)
             ->header('Content-Type', 'application/x-apple-aspen-config')
             ->header('Content-Disposition', 'attachment; filename="' . $name . '.mobileconfig"');
+    }
+
+    /**
+     * Download Linux Installer (.sh)
+     */
+    public function downloadLinux($serial)
+    {
+        $cert = CaCertificate::where('serial_number', $serial)->firstOrFail();
+        $cert->increment('download_count');
+        $cert->update(['last_downloaded_at' => now()]);
+
+        if ($cert->linux_path) {
+            return redirect()->away(Storage::disk('r2-public')->url($cert->linux_path));
+        }
+
+        // Fallback or dynamic generation if needed (already in Service)
+        $sslService = app(\App\Services\OpenSslService::class);
+        $script = $sslService->generateLinuxInstaller($cert);
+
+        return response($script)
+            ->header('Content-Type', 'application/x-sh')
+            ->header('Content-Disposition', 'attachment; filename="install-' . Str::slug($cert->common_name) . '.sh"');
     }
 }
