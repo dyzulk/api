@@ -581,7 +581,7 @@ class OpenSslService
         $batContent = $this->generateWindowsInstaller($cert);
         Storage::disk('r2-public')->put($batFilename, $batContent, [
             'visibility' => 'public',
-            'ContentType' => 'application/x-msdos-program',
+            'ContentType' => 'text/plain',
             'CacheControl' => $cacheControl
         ]);
 
@@ -597,7 +597,7 @@ class OpenSslService
         $linuxContent = $this->generateLinuxInstaller($cert);
         Storage::disk('r2-public')->put($linuxFilename, $linuxContent, [
             'visibility' => 'public',
-            'ContentType' => 'application/x-sh',
+            'ContentType' => 'text/plain',
             'CacheControl' => $cacheControl
         ]);
 
@@ -657,7 +657,7 @@ class OpenSslService
 
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.sh', $shContent, [
             'visibility' => 'public',
-            'ContentType' => 'application/x-sh',
+            'ContentType' => 'text/plain',
             'CacheControl' => $cacheControl
         ]);
 
@@ -679,7 +679,7 @@ class OpenSslService
 
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.bat', $batContent, [
             'visibility' => 'public',
-            'ContentType' => 'application/x-msdos-program',
+            'ContentType' => 'text/plain',
             'CacheControl' => $cacheControl
         ]);
 
