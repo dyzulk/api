@@ -82,7 +82,7 @@ class TicketController extends Controller
                 // Handle Attachments
                 if ($request->hasFile('attachments')) {
                     foreach ($request->file('attachments') as $file) {
-                        $path = $file->store('ticket-attachments', 'r2-private');
+                        $path = $file->store("ticket-attachments/{$user->id}", 'r2-private');
                         // $url = Storage::disk('r2')->url($path); // Removed public URL generation
                         TicketAttachment::create([
                             'ticket_reply_id' => $reply->id,
@@ -170,7 +170,7 @@ class TicketController extends Controller
         // Handle Attachments
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('ticket-attachments', 'r2-private');
+                $path = $file->store("ticket-attachments/{$user->id}", 'r2-private');
                 // $url = Storage::disk('r2')->url($path);
                 TicketAttachment::create([
                     'ticket_reply_id' => $reply->id,
