@@ -11,7 +11,7 @@ class NotifyCertificateExpirations extends Command
      *
      * @var string
      */
-    protected $signature = 'certificates:notify-expiring';
+    protected $signature = 'trustlab:notify-expiring';
 
     /**
      * The console command description.
