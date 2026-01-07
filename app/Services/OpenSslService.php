@@ -416,7 +416,8 @@ class OpenSslService
                 'serial_number' => $newSerialHex,
                 'valid_from' => date('Y-m-d H:i:s', $newInfo['validFrom_time_t']),
                 'valid_to' => date('Y-m-d H:i:s', $newInfo['validTo_time_t']),
-                'issuer_name' => $cert->ca_type === 'root' ? 'Self-Signed' : ($root ? $root->common_name : 'Unknown Root'),
+                'issuer_name' => $cert->ca_type === 'root' ? $cert->common_name : ($root ? $root->common_name : 'Unknown Root'),
+                'issuer_serial' => $cert->ca_type === 'root' ? $newSerialHex : ($root ? $root->serial_number : null),
             ];
 
         } finally {
@@ -475,6 +476,7 @@ class OpenSslService
             'valid_from' => $newData['valid_from'],
             'valid_to' => $newData['valid_to'],
             'issuer_name' => $newData['issuer_name'],
+            'issuer_serial' => $newData['issuer_serial'],
             'is_latest' => true,
         ]);
 
