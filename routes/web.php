@@ -12,6 +12,9 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout']);
 Route::post('/register', [AuthController::class, 'register']);
 
+use App\Http\Controllers\MagicLinkController;
+Route::get('/auth/magic', [MagicLinkController::class, 'login']);
+
 use App\Http\Controllers\Api\PasswordResetController;
 Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
 Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
