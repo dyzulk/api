@@ -26,4 +26,4 @@ Thumbs.db
 *.sql
 *.sqlite
 .env.testing
-scripts/deploy-webhook.local.sh
+scripts/deploy-webhook.myaapanel.sh
