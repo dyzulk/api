@@ -42,7 +42,8 @@ class OpenSslService
             // Generate a random serial
             $serial = $this->generateSerialNumber();
 
-            $rootCert = openssl_csr_sign($rootCsr, null, $rootKey, 10950, [
+            $rootDays = Config::get('openssl.durations.root', 7300);
+            $rootCert = openssl_csr_sign($rootCsr, null, $rootKey, $rootDays, [
                 'digest_alg' => 'sha256',
                 'x509_extensions' => 'v3_ca',
                 'config' => $configFile,
@@ -84,7 +85,8 @@ class OpenSslService
             $int4096Csr = openssl_csr_new($int4096Config, $int4096Key, ['digest_alg' => 'sha256', 'config' => $configFile]);
             if (!$int4096Csr) throw new \Exception('Failed to generate Int-4096 CSR: ' . openssl_error_string());
 
-            $int4096Cert = openssl_csr_sign($int4096Csr, $rootCert, $rootKey, 10950, [
+            $intDays = Config::get('openssl.durations.intermediate', 3650);
+            $int4096Cert = openssl_csr_sign($int4096Csr, $rootCert, $rootKey, $intDays, [
                 'digest_alg' => 'sha256',
                 'x509_extensions' => 'v3_ca',
                 'config' => $configFile,
@@ -124,7 +126,7 @@ class OpenSslService
             $int2048Csr = openssl_csr_new($int2048Config, $int2048Key, ['digest_alg' => 'sha256', 'config' => $configFile]);
             if (!$int2048Csr) throw new \Exception('Failed to generate Int-2048 CSR: ' . openssl_error_string());
 
-            $int2048Cert = openssl_csr_sign($int2048Csr, $rootCert, $rootKey, 10950, [
+            $int2048Cert = openssl_csr_sign($int2048Csr, $rootCert, $rootKey, $intDays, [
                 'digest_alg' => 'sha256',
                 'x509_extensions' => 'v3_ca',
                 'config' => $configFile,
@@ -167,9 +169,13 @@ class OpenSslService
         $keyBits = $data['key_bits'] ?? 2048;
         $issuerType = (int)$keyBits === 4096 ? 'intermediate_4096' : 'intermediate_2048';
         
-        $intermediate = CaCertificate::where('ca_type', $issuerType)->first();
+        // Rule: Always use the LATEST active intermediate version
+        $intermediate = CaCertificate::where('ca_type', $issuerType)
+            ->where('is_latest', true)
+            ->first();
+
         if (!$intermediate) {
-            throw new \Exception("Intermediate CA ({$issuerType}) not found. Please setup CA first.");
+            throw new \Exception("Active Intermediate CA ({$issuerType}) not found. Please setup or check CA status.");
         }
 
         $dn = [
@@ -228,7 +234,7 @@ class OpenSslService
             $serial = $this->generateSerialNumber();
             \Log::debug("Signing CSR with serial: " . $serial);
             
-            $days = 365;
+            $days = Config::get('openssl.durations.leaf', 365);
             if (!empty($data['is_test_short_lived'])) {
                 $days = 1; // Minimum allowed by OpenSSL, will override DB record later
             }
@@ -430,14 +436,17 @@ class OpenSslService
      * Perform a coordinated renewal of the entire CA chain.
      * Order: Root -> Intermediates.
      */
-    public function bulkRenewStrategy(int $days = 3650)
+    public function bulkRenewStrategy()
     {
+        $rootDays = Config::get('openssl.durations.root', 7300);
+        $intDays = Config::get('openssl.durations.intermediate', 3650);
+
         // 1. Get current latest Root
         $root = CaCertificate::where('ca_type', 'root')->where('is_latest', true)->first();
         if (!$root) throw new \Exception("Current Root CA not found.");
 
         // 2. Renew Root
-        $newRoot = $this->executeRenewalFlow($root, $days);
+        $newRoot = $this->executeRenewalFlow($root, $rootDays);
 
         // 3. Renew Intermediates using the NEW Root
         $intermediates = CaCertificate::whereIn('ca_type', ['intermediate_2048', 'intermediate_4096'])
@@ -445,7 +454,7 @@ class OpenSslService
             ->get();
 
         foreach ($intermediates as $int) {
-            $this->executeRenewalFlow($int, $days);
+            $this->executeRenewalFlow($int, $intDays);
         }
 
         // 4. Final Mass Sync

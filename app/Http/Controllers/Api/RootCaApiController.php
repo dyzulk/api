@@ -56,10 +56,8 @@ class RootCaApiController extends Controller
     public function renewAll(Request $request)
     {
         $this->authorizeAdminOrOwner();
-        $days = (int) $request->input('days', 3650);
-
         try {
-            $this->sslService->bulkRenewStrategy($days);
+            $this->sslService->bulkRenewStrategy();
             return response()->json([
                 'status' => 'success',
                 'message' => 'Entire CA Chain (Root & Intermediates) renewed successfully.'

@@ -1,6 +1,15 @@
-<?php
-
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Certificate Durations (in days)
+    |--------------------------------------------------------------------------
+    */
+    'durations' => [
+        'root'         => env('CA_DURATION_ROOT', 7300),         // 20 Years
+        'intermediate' => env('CA_DURATION_INTERMEDIATE', 3650), // 10 Years
+        'leaf'         => env('CA_DURATION_LEAF', 365),          // 1 Year
+    ],
+
     'ca_root' => [
         'countryName'            => env('CA_ROOT_COUNTRY_NAME', 'ID'),
         'organizationName'       => env('CA_ROOT_ORGANIZATION_NAME', 'DyDev Authority'),
