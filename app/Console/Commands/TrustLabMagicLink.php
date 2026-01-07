@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-class MagicLinkCommand extends Command
+class TrustLabMagicLink extends Command
 {
     /**
      * The name and signature of the console command.

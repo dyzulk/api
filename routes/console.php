@@ -8,4 +8,4 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('certificates:notify-expiring')->daily();
+Schedule::command('trustlab:notify-expiring')->daily();

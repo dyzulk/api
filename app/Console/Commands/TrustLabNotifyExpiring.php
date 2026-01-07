@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 
-class NotifyCertificateExpirations extends Command
+class TrustLabNotifyExpiring extends Command
 {
     /**
      * The name and signature of the console command.
