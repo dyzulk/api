@@ -31,6 +31,7 @@ return new class extends Migration
                 
                 $table->string('common_name')->nullable();
                 $table->string('organization')->nullable();
+                $table->string('issuer_name')->nullable();
                 $table->dateTime('valid_from')->nullable();
                 $table->dateTime('valid_to')->nullable();
                 
@@ -61,6 +62,9 @@ return new class extends Migration
                 }
                 if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'is_latest')) {
                     $table->boolean('is_latest')->default(false)->after('last_synced_at');
+                }
+                if (!Schema::connection('mysql_ca')->hasColumn('ca_certificates', 'issuer_name')) {
+                    $table->string('issuer_name')->nullable()->after('organization');
                 }
             });
         }
