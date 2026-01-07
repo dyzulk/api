@@ -18,7 +18,7 @@ class TrustLabNotifyExpiring extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Check for expiring or expired certificates and send automated email/system notifications to users';
 
     /**
      * Execute the console command.
