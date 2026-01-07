@@ -61,6 +61,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         // Root CA Management (Admin Only)
         Route::get('/admin/ca-certificates', [RootCaApiController::class, 'index']);
         Route::post('/admin/ca-certificates/sync-cdn', [RootCaApiController::class, 'syncToCdn']);
+        Route::post('/admin/ca-certificates/purge-cdn', [RootCaApiController::class, 'purgeCdn']);
         Route::post('/admin/ca-certificates/sync-crt', [RootCaApiController::class, 'syncCrtOnly']);
         Route::post('/admin/ca-certificates/sync-installers', [RootCaApiController::class, 'syncInstallersOnly']);
         Route::post('/admin/ca-certificates/sync-bundles', [RootCaApiController::class, 'syncBundlesOnly']);

@@ -942,4 +942,27 @@ class OpenSslService
             return false;
         }
     }
+    /**
+     * Purge everything under the 'ca/' directory on the CDN.
+     */
+    public function purgeAllCaFromCdn()
+    {
+        $disk = Storage::disk('r2-public');
+        
+        if ($disk->exists('ca')) {
+            $disk->deleteDirectory('ca');
+        }
+
+        // Reset local database sync status
+        CaCertificate::query()->update([
+            'last_synced_at' => null,
+            'cert_path' => null,
+            'der_path' => null,
+            'bat_path' => null,
+            'mac_path' => null,
+            'linux_path' => null,
+        ]);
+
+        return true;
+    }
 }

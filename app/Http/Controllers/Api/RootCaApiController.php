@@ -171,6 +171,23 @@ class RootCaApiController extends Controller
         }
     }
 
+    public function purgeCdn()
+    {
+        $this->authorizeAdminOrOwner();
+        try {
+            $this->sslService->purgeAllCaFromCdn();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'CDN assets purged successfully and local sync status reset.'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Purge failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
     protected function authorizeAdminOrOwner()
     {
         if (!auth()->user()->isAdminOrOwner()) {
