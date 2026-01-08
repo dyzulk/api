@@ -10,10 +10,12 @@ use Illuminate\Http\Request;
 class RootCaApiController extends Controller
 {
     protected $sslService;
+    protected $installerService;
 
-    public function __construct(OpenSslService $sslService)
+    public function __construct(OpenSslService $sslService, \App\Services\CaInstallerService $installerService)
     {
         $this->sslService = $sslService;
+        $this->installerService = $installerService;
     }
 
     public function index()
@@ -96,7 +98,7 @@ class RootCaApiController extends Controller
             $certificates = CaCertificate::all();
             $count = 0;
             foreach ($certificates as $cert) {
-                if ($this->sslService->uploadIndividualInstallersOnly($cert, $mode)) {
+                if ($this->installerService->uploadIndividualInstallersOnly($cert, $mode)) {
                     $count++;
                 }
             }
@@ -110,7 +112,7 @@ class RootCaApiController extends Controller
     {
         $this->authorizeAdminOrOwner();
         try {
-            if ($this->sslService->syncAllBundles()) {
+            if ($this->installerService->syncAllBundles()) {
                 return response()->json(['status' => 'success', 'message' => "Successfully synced All-in-One bundles."]);
             }
             return response()->json(['status' => 'error', 'message' => 'No certificates found to bundle.'], 404);
@@ -130,13 +132,13 @@ class RootCaApiController extends Controller
 
             foreach ($certificates as $cert) {
                 if ($this->sslService->uploadPublicCertsOnly($cert, $mode)) {
-                    $this->sslService->uploadIndividualInstallersOnly($cert, $mode);
+                    $this->installerService->uploadIndividualInstallersOnly($cert, $mode);
                     $count++;
                 }
             }
             
             // Also sync bundles (Always 'latest' as bundles are aggregate)
-            $this->sslService->syncAllBundles();
+            $this->installerService->syncAllBundles();
 
             return response()->json([
                 'status' => 'success',

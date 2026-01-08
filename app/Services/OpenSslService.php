@@ -468,7 +468,9 @@ class OpenSslService
         }
 
         // 4. Final Mass Sync
-        $this->syncAllBundles();
+        // 4. Final Mass Sync
+        $installerService = app(\App\Services\CaInstallerService::class);
+        $installerService->syncAllBundles();
         
         return true;
     }
@@ -503,7 +505,8 @@ class OpenSslService
 
         // Sync to CDN
         $this->uploadPublicCertsOnly($newCert, 'both');
-        $this->uploadIndividualInstallersOnly($newCert, 'both');
+        $installerService = app(\App\Services\CaInstallerService::class);
+        $installerService->uploadIndividualInstallersOnly($newCert, 'both');
 
         return $newCert;
     }
