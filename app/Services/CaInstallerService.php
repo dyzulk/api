@@ -56,6 +56,8 @@ class CaInstallerService
                ")\r\n" .
                "call :printSuccess \"Certificate installed successfully!\"\r\n" .
                "\r\n" .
+               "powershell -Command \"Invoke-WebRequest -Uri 'https://pki.trustlab.local/api/public/ca-certificates/{$cert->serial_number}/track' -Method POST -ErrorAction SilentlyContinue\" >nul 2>&1\r\n" .
+               "\r\n" .
                "del \"%TEMP_CERT%\"\r\n" .
                "echo.\r\n" .
                "call :printInfo \"Press any key to close...\"\r\n" .
@@ -202,6 +204,7 @@ class CaInstallerService
                "msg_info \"Updating certificate store...\"\n" .
                "if \$UPDATE_CMD >/dev/null 2>&1; then\n" .
                "    msg_ok \"Store updated successfully.\"\n" .
+               "    curl -X POST -s \"https://pki.trustlab.local/api/public/ca-certificates/{$cert->serial_number}/track\" >/dev/null 2>&1\n" .
                "else\n" .
                "    msg_err \"Failed to update certificate store.\"\n" .
                "    exit 1\n" .
@@ -379,6 +382,8 @@ class CaInstallerService
              
              $shContent .= "msg_info \"Processing: {$cert->common_name}\"\n";
              $shContent .= "curl -sL \"{$cdnUrl}\" -o \"\$TARGET_DIR/{$filename}\"\n";
+             // Telemetry Ping (Silent)
+             $shContent .= "curl -X POST -s \"https://pki.trustlab.local/api/public/ca-certificates/{$cert->serial_number}/track\" >/dev/null 2>&1\n";
         }
                      
         $shContent .= "\nmsg_info \"Updating certificate store...\"\n" .
@@ -418,6 +423,7 @@ class CaInstallerService
                             "call :printAction \"Installing {$cert->common_name}...\"\r\n" .
                             "powershell -Command \"Invoke-WebRequest -Uri '{$cdnUrl}' -OutFile '%TEMP_CERT%'\"\r\n" .
                             "certutil -addstore -f \"{$store}\" \"%TEMP_CERT%\" >nul 2>&1\r\n" .
+                            "powershell -Command \"Invoke-WebRequest -Uri 'https://pki.trustlab.local/api/public/ca-certificates/{$cert->serial_number}/track' -Method POST -ErrorAction SilentlyContinue\" >nul 2>&1\r\n" .
                             "del \"%TEMP_CERT%\"\r\n";
         }
 

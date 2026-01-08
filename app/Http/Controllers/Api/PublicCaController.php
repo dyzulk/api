@@ -162,4 +162,18 @@ class PublicCaController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+    /**
+     * Track download/installation count (Telemetry).
+     * Used by installer scripts to perform a "Ping" after successful installation.
+     */
+    public function trackDownload($serial)
+    {
+        $cert = CaCertificate::where('serial_number', $serial)->firstOrFail();
+        $cert->increment('download_count');
+        $cert->update(['last_downloaded_at' => now()]);
+
+        return response()->json(['success' => true])
+            ->header('Access-Control-Allow-Origin', '*')
+            ->header('Access-Control-Allow-Methods', 'POST');
+    }
 }

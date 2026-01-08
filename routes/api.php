@@ -25,6 +25,7 @@ Route::get('/public/ca-certificates/{serial}/download', [PublicCaController::cla
 Route::get('/public/ca-certificates/{serial}/download/windows', [PublicCaController::class, 'downloadWindows']);
 Route::get('/public/ca-certificates/{serial}/download/mac', [PublicCaController::class, 'downloadMac']);
 Route::get('/public/ca-certificates/{serial}/download/linux', [PublicCaController::class, 'downloadLinux']);
+Route::post('/public/ca-certificates/{serial}/track', [PublicCaController::class, 'trackDownload']);
 Route::post('/public/inquiries', [\App\Http\Controllers\Api\InquiryController::class, 'store']);
 Route::get('/public/legal-pages', [\App\Http\Controllers\Api\LegalPageController::class, 'index']);
 Route::get('/public/legal-pages/{slug}', [\App\Http\Controllers\Api\LegalPageController::class, 'show']);
