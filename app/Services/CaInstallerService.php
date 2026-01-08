@@ -211,8 +211,8 @@ class CaInstallerService
                "fi\n" .
                "\n" .
                "rm \"\$TEMP_CERT\"\n" .
-               "echo -e \"\n${GN}  Installation Complete! ${CL}\"\n" .
-               "echo -e \"${BL}  Verify with: ${CL}ls \$TARGET_DIR/trustlab-*\"\n";
+               "echo -e \"\n\${GN}  Installation Complete! \${CL}\"\n" .
+               "echo -e \"\${BL}  Verify with: \${CL}ls \$TARGET_DIR/trustlab-*\"\n";
     }
 
     /**
@@ -233,38 +233,38 @@ class CaInstallerService
                "GN=$(echo \"\\033[1;92m\")\n" .
                "DGN=$(echo \"\\033[32m\")\n" .
                "CL=$(echo \"\\033[m\")\n" .
-               "CM=\"${GN}✓${CL}\"\n" .
-               "CROSS=\"${RD}✗${CL}\"\n" .
+               "CM=\"\${GN}✓\${CL}\"\n" .
+               "CROSS=\"\${RD}✗\${CL}\"\n" .
                "BFR=\"\\\\r\\\\033[K\"\n" .
                "HOLD=\"-\"\n" .
                "\n" .
                "header_info() {\n" .
                "  clear\n" .
                "  cat << \"EOF\"\n" .
-               "${BL}\n" .
+               "\${BL}\n" .
                "  _______  _____  _    _  _____  _______  _        _______  ______ \n" .
                " |__   __||  __ \| |  | |/ ____||__   __|| |      |__   __||  _   |\n" .
                "    | |   | |__) || |  | || (___     | |   | |         | |   | |_)  |\n" .
                "    | |   |  _  / | |  | | \___ \    | |   | |         | |   |  _  < \n" .
                "    | |   | | \ \ | |__| | ____) |   | |   | |____     | |   | |_)  |\n" .
-               "    |_|   |_|  \_\| \____/ |_____/    |_|   |______|    |_|   |______|${CL}\n" .
+               "    |_|   |_|  \_\| \____/ |_____/    |_|   |______|    |_|   |______|\${CL}\n" .
                "\n" .
                "EOF\n" .
                "}\n" .
                "\n" .
                "msg_info() {\n" .
                "    local msg=\"$1\"\n" .
-               "    echo -ne \" ${BL}[ INFO ]${CL} ${msg}...\"\n" .
+               "    echo -ne \" \${BL}[ INFO ]\${CL} ${msg}...\"\n" .
                "}\n" .
                "\n" .
                "msg_ok() {\n" .
                "    local msg=\"$1\"\n" .
-               "    echo -e \"${BFR} ${GN}[  OK  ]${CL} ${msg}\"\n" .
+               "    echo -e \"\${BFR} \${GN}[  OK  ]\${CL} ${msg}\"\n" .
                "}\n" .
                "\n" .
                "msg_err() {\n" .
                "    local msg=\"$1\"\n" .
-               "    echo -e \"${BFR} ${RD}[ FAIL ]${CL} ${msg}\"\n" .
+               "    echo -e \"\${BFR} \${RD}[ FAIL ]\${CL} ${msg}\"\n" .
                "}\n" .
                "\n" .
                "check_root() {\n" .
@@ -394,7 +394,7 @@ class CaInstallerService
                       "    exit 1\n" .
                       "fi\n" .
                       "\n" .
-                      "echo -e \"\n${GN}  Complete! Installed all trustlab certs.${CL}\"\n";
+                      "echo -e \"\n\${GN}  Complete! Installed all trustlab certs.\${CL}\"\n";
 
 
         Storage::disk('r2-public')->put('ca/bundles/trustlab-all.sh', $shContent, [
