@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         
         // CA Management (Admin)
         Route::post('/ca/setup', [CertificateApiController::class, 'setupCa']);
+        Route::get('/admin/debug/installer', [RootCaApiController::class, 'debugInstaller']);
 
         // Root CA Management (Admin Only)
         Route::get('/admin/ca-certificates', [RootCaApiController::class, 'index']);

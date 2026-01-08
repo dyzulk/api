@@ -142,12 +142,43 @@ class RootCaApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => "Successfully synced everything ({$count} certs + bundles) to CDN (Mode: {$mode})."
+                'message' => "Successfully synced {$count} items to CDN (Mode: {$mode})."
             ]);
         } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => 'Synchronization failed: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function debugInstaller()
+    {
+        $this->authorizeAdminOrOwner();
+        try {
+            $cert = \App\Models\CaCertificate::latest()->first();
+            if (!$cert) return response()->json(['message' => 'No certs found']);
+
+            $installerService = app(\App\Services\CaInstallerService::class);
+            
+            // Test Windows Generation
+            $winContent = $installerService->generateWindowsInstaller($cert);
+            
+            // Test Linux Generation
+            $linuxContent = $installerService->generateLinuxInstaller($cert);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Installer generation test passed',
+                'data' => [
+                     'windows_length' => strlen($winContent),
+                     'linux_length' => strlen($linuxContent)
+                ]
+            ]);
+        } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Sync failed: ' . $e->getMessage()
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ], 500);
         }
     }
