@@ -23,6 +23,7 @@ return [
 
     'allowed_origins_patterns' => [
         '#^https?://.*\.trustlab\.pages\.dev$#',
+        '#^http://localhost:\d+$#',
     ],
 
     'allowed_headers' => ['*'],
