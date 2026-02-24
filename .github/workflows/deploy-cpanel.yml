@@ -45,8 +45,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # Menggunakan path absolut sesuai environment server
-          server-dir: /home/dyzulkc2/public_domain/api.dyzulk.com/
+          # Path FTP tujuan, karena akun FTP API sudah mengarah ke /home/dyzulkc2/public_domain/api.dyzulk.com/
+          server-dir: ./
           exclude: |
             **/.git*
             **/.git*/**
