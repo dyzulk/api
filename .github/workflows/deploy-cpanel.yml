@@ -14,16 +14,6 @@ jobs:
       - name: 🚚 Get latest code
         uses: actions/checkout@v4
 
-      # 2. Siapkan PHP 8.4 & Composer
-      - name: 🟢 Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4' # Diupdate ke 8.4 sesuai permintaan
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
-          coverage: none
-
-      - name: 📦 Install Composer Dependencies
-        run: composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction
 
       # 3. Siapkan Node.js & Build React/Inertia
       - name: 🟢 Setup Node.js
@@ -37,6 +27,10 @@ jobs:
           npm run build
           # Hapus node_modules agar proses upload cepat
           rm -rf node_modules 
+
+      # Buat file trigger untuk Cron Job cPanel
+      - name: 📝 Create Deploy Trigger
+        run: touch .deploy_trigger
 
       # 4. Kirim File ke cPanel via FTP
       - name: 📂 Sync files via FTP
@@ -53,3 +47,4 @@ jobs:
             **/tests/**
             **/storage/*.key
             .env
+            vendor/**
