@@ -45,9 +45,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          # Path ini RELATIF terhadap folder home user (dyzulkc2)
-          # Sesuai screenshot: ~/public_domain/api.dyzulk.com
-          server-dir: public_domain/api.dyzulk.com/
+          # Menggunakan path absolut sesuai environment server
+          server-dir: /home/dyzulkc2/public_domain/api.dyzulk.com/
           exclude: |
             **/.git*
             **/.git*/**
